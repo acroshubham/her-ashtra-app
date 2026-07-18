@@ -31,8 +31,7 @@ export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const displayName =
-    user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";
+  const displayName = user?.fullName || user?.email?.split("@")[0] || "there";
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>

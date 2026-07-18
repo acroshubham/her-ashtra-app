@@ -43,3 +43,8 @@ app-example
 # generated native folders
 /ios
 /android
+
+# internal planning docs — not for the team repo, local reference only
+/BACKEND_IMPLEMENTATION_PLAN.md
+/NEON_RENDER_DEPLOYMENT.md
+/PROJECT_SPEC.md

@@ -4,10 +4,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth-context";
-import { signOut } from "@/lib/supabase";
 
 export default function Settings() {
-  const { user, profile } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -23,7 +22,7 @@ export default function Settings() {
           </View>
           <View className="flex-1">
             <Text className="text-[#28131a] font-bold text-base" numberOfLines={1}>
-              {profile?.full_name || user?.email?.split("@")[0] || "User"}
+              {user?.fullName || user?.email?.split("@")[0] || "User"}
             </Text>
             <Text className="text-[#8a6b73] text-sm" numberOfLines={1}>
               {user?.email}
@@ -32,7 +31,7 @@ export default function Settings() {
         </View>
 
         <TouchableOpacity
-          onPress={() => signOut()}
+          onPress={() => logout()}
           activeOpacity={0.85}
           className="bg-red-50 border border-red-200 rounded-2xl py-4 flex-row items-center justify-center"
         >

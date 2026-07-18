@@ -17,22 +17,27 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth-context";
 
-export default function Login() {
-  const { login } = useAuth();
+export default function Register() {
+  const { register } = useAuth();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     if (!email || !password) {
       setError("Please enter your email and password.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
 
     setError(null);
     setLoading(true);
-    const result = await login(email.trim(), password);
+    const result = await register(email.trim(), password, fullName.trim() || undefined);
     setLoading(false);
 
     if (result.error) {
@@ -53,11 +58,11 @@ export default function Login() {
           >
             <View className="items-center mb-8">
               <View className="w-16 h-16 rounded-2xl bg-brand-500 items-center justify-center mb-4 shadow-lg shadow-brand-500/40">
-                <Ionicons name="shield-checkmark" size={32} color="#ffffff" />
+                <Ionicons name="person-add" size={32} color="#ffffff" />
               </View>
-              <Text className="text-[#28131a] text-3xl font-bold text-center">Her Ashtra</Text>
+              <Text className="text-[#28131a] text-3xl font-bold text-center">Create Account</Text>
               <Text className="text-[#8a6b73] text-base mt-2 text-center">
-                Your safety, always within reach.
+                Join the network that keeps you safe.
               </Text>
             </View>
 
@@ -67,6 +72,19 @@ export default function Login() {
                   <Text className="text-red-500 text-sm text-center font-medium">{error}</Text>
                 </View>
               )}
+
+              <View className="mb-4">
+                <Text className="text-[#8a6b73] text-sm font-semibold mb-2 ml-1">FULL NAME</Text>
+                <TextInput
+                  className="bg-brand-50 rounded-2xl p-4 text-[#28131a] border border-brand-100"
+                  placeholder="Your name"
+                  placeholderTextColor="#c98d9a"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+              </View>
 
               <View className="mb-4">
                 <Text className="text-[#8a6b73] text-sm font-semibold mb-2 ml-1">EMAIL</Text>
@@ -87,7 +105,7 @@ export default function Login() {
                 <Text className="text-[#8a6b73] text-sm font-semibold mb-2 ml-1">PASSWORD</Text>
                 <TextInput
                   className="bg-brand-50 rounded-2xl p-4 text-[#28131a] border border-brand-100"
-                  placeholder="Enter your password"
+                  placeholder="At least 8 characters"
                   placeholderTextColor="#c98d9a"
                   value={password}
                   onChangeText={setPassword}
@@ -95,28 +113,28 @@ export default function Login() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!loading}
-                  onSubmitEditing={handleLogin}
+                  onSubmitEditing={handleRegister}
                 />
               </View>
 
               <TouchableOpacity
                 className={`rounded-2xl py-4 items-center ${loading ? "bg-brand-500/50" : "bg-brand-500"}`}
-                onPress={handleLogin}
+                onPress={handleRegister}
                 disabled={loading}
                 activeOpacity={0.9}
               >
                 {loading ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text className="text-white font-bold text-lg text-center">Log In</Text>
+                  <Text className="text-white font-bold text-lg text-center">Create Account</Text>
                 )}
               </TouchableOpacity>
 
               <View className="flex-row justify-center mt-6">
-                <Text className="text-[#8a6b73]">Don&apos;t have an account? </Text>
-                <Link href="/(auth)/register" asChild>
+                <Text className="text-[#8a6b73]">Already have an account? </Text>
+                <Link href="/(auth)/login" asChild>
                   <TouchableOpacity>
-                    <Text className="text-brand-600 font-bold">Sign up</Text>
+                    <Text className="text-brand-600 font-bold">Log in</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
