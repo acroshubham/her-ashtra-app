@@ -1,13 +1,16 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import PaginatedTabBar from "@/components/navigation/PaginatedTabBar";
+import ShakeArmer from "@/components/ShakeArmer";
 
 export default function TabsLayout() {
   return (
-    <Tabs
-      tabBar={(props) => <PaginatedTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
+    <>
+      <ShakeArmer />
+      <Tabs
+        tabBar={(props) => <PaginatedTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -63,7 +66,8 @@ export default function TabsLayout() {
           title: "Settings",
           tabBarIcon: ({ color, size }) => <Ionicons name="settings" size={size} color={color} />,
         }}
-      />
-    </Tabs>
+        />
+      </Tabs>
+    </>
   );
 }

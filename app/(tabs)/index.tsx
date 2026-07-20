@@ -46,13 +46,13 @@ export default function Home() {
           </View>
 
           <TouchableOpacity
-            onPress={() => router.push("/(tabs)/safe-trip")}
+            onPress={() => router.push("/(sos)/active" as Href)}
             activeOpacity={0.85}
             className="bg-sos-500 rounded-3xl py-8 items-center mb-7 shadow-lg"
           >
             <Ionicons name="alert-circle" size={40} color="#ffffff" />
             <Text className="text-white text-xl font-extrabold mt-2 tracking-wide">SOS</Text>
-            <Text className="text-white/80 text-xs mt-1">Tap to start a Safe Trip</Text>
+            <Text className="text-white/80 text-xs mt-1">Tap or shake to send an alert</Text>
           </TouchableOpacity>
 
           <Text className="text-[#28131a] text-lg font-bold mb-3">Explore</Text>

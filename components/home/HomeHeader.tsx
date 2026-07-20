@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,21 +7,34 @@ import Dropdown from "@/components/common/Dropdown";
 
 export const HomeHeader: React.FC = () => {
   const router = useRouter();
-  const { contacts, selectedContact, setSelectedContact } = useContactStore();
+  const { contacts, selectedContact, setSelectedContact, loadContacts } = useContactStore();
+
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
 
   return (
     <View className="px-4 py-4 bg-white border-b border-brand-100 z-10">
       <View className="flex-row items-center justify-between">
         <View className="flex-1">
-          <Text className="text-[#8a6b73] text-xs font-semibold tracking-wide">
-            SHARING LIVE LOCATION WITH
-          </Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[#8a6b73] text-xs font-semibold tracking-wide">
+              SHARING LIVE LOCATION WITH
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/circle")}
+              className="flex-row items-center"
+            >
+              <Ionicons name="add-circle" size={16} color="#e11d48" />
+              <Text className="text-brand-600 text-xs font-semibold ml-1">Add contact</Text>
+            </TouchableOpacity>
+          </View>
           <Dropdown
             items={contacts}
             selected={selectedContact}
             onSelect={setSelectedContact}
             getLabel={(c) => c.name}
-            getSubLabel={(c) => c.relation}
+            getSubLabel={(c) => c.relation ?? undefined}
             getKey={(c) => c.id}
             placeholder="Select a guardian"
           />
