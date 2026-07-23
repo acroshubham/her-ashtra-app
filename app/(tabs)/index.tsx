@@ -13,11 +13,12 @@ const QUICK_LINKS: Array<{
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   bg: string;
+  ready?: boolean;
 }> = [
   { href: "/(tabs)/guardian-network", label: "Guardian Network", icon: "people", color: "#7c3aed", bg: "#ede9fe" },
-  { href: "/(tabs)/ai-safety", label: "AI Safety", icon: "sparkles", color: "#e11d48", bg: "#ffe4e6" },
+  { href: "/(tabs)/ai-safety", label: "AI Safety", icon: "sparkles", color: "#e11d48", bg: "#ffe4e6", ready: true },
   { href: "/(tabs)/offline-sos", label: "Offline SOS", icon: "cellular", color: "#0891b2", bg: "#cffafe" },
-  { href: "/(tabs)/circle", label: "Trusted Circle", icon: "heart", color: "#059669", bg: "#d1fae5" },
+  { href: "/(tabs)/circle", label: "Trusted Circle", icon: "heart", color: "#059669", bg: "#d1fae5", ready: true },
 ];
 
 function getGreeting() {
@@ -71,7 +72,9 @@ export default function Home() {
                   <Ionicons name={link.icon} size={20} color={link.color} />
                 </View>
                 <Text className="text-[#28131a] font-semibold text-sm">{link.label}</Text>
-                <Text className="text-[#8a6b73] text-xs mt-0.5">Coming soon</Text>
+                <Text className="text-[#8a6b73] text-xs mt-0.5">
+                  {link.ready ? "Open" : "Coming soon"}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
