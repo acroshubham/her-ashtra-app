@@ -13,7 +13,9 @@ import {
 } from "expo-camera";
 import { useSosStore } from "@/stores/useSosStore";
 import { useContactStore } from "@/stores/useContactStore";
+import { useSafeHavenStore } from "@/stores/useSafeHavenStore";
 import { uploadVideo } from "@/lib/cloudinary";
+import { CATEGORY_COLOR, CATEGORY_ICON, formatDistance, openDirections } from "@/lib/safeHaven";
 import colors from "@/lib/theme";
 
 const COUNTDOWN_SECONDS = 7;
@@ -29,6 +31,9 @@ export default function ActiveSos() {
   const reset = useSosStore((s) => s.reset);
   const activeEvent = useSosStore((s) => s.activeEvent);
   const contacts = useContactStore((s) => s.contacts);
+  const findSafeHavens = useSafeHavenStore((s) => s.findNearby);
+  const safeHaven = useSafeHavenStore((s) => s.recommendation);
+  const resetSafeHavens = useSafeHavenStore((s) => s.reset);
 
   const [step, setStep] = useState<Step>("countdown");
   const [count, setCount] = useState(COUNTDOWN_SECONDS);
@@ -55,8 +60,9 @@ export default function ActiveSos() {
 
   const cancel = useCallback(() => {
     reset();
+    resetSafeHavens();
     router.back();
-  }, [reset, router]);
+  }, [reset, resetSafeHavens, router]);
 
   // --- Dispatch: capture GPS, create event, then record video -----------
   const dispatch = useCallback(async () => {
@@ -85,6 +91,10 @@ export default function ActiveSos() {
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setStep("live");
+    // Find the safest nearby destination (best-effort; needs the GPS fix).
+    if (lat != null && lng != null) {
+      void findSafeHavens({ lat, lng });
+    }
     // Fire the recording flow without blocking the UI transition.
     void recordAndUpload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,8 +138,9 @@ export default function ActiveSos() {
   const onSafe = useCallback(async () => {
     stopRecording();
     await resolve();
+    resetSafeHavens();
     router.back();
-  }, [resolve, stopRecording, router]);
+  }, [resolve, stopRecording, resetSafeHavens, router]);
 
   const shareLink = useCallback(() => {
     if (!activeEvent) return;
@@ -241,6 +252,45 @@ export default function ActiveSos() {
             </Text>
           </View>
         </View>
+
+        {safeHaven && (
+          <View className="bg-white/10 rounded-2xl p-4 mt-3">
+            <View className="flex-row items-center">
+              <Ionicons name="shield-checkmark" size={18} color={colors.success[500]} />
+              <Text className="text-white/90 font-semibold ml-2">Nearest safe place</Text>
+            </View>
+            <View className="flex-row items-center mt-3">
+              <View
+                className="w-10 h-10 rounded-xl items-center justify-center mr-3"
+                style={{ backgroundColor: `${CATEGORY_COLOR[safeHaven.category]}33` }}
+              >
+                <Ionicons
+                  name={CATEGORY_ICON[safeHaven.category]}
+                  size={20}
+                  color="#ffffff"
+                />
+              </View>
+              <View className="flex-1 pr-2">
+                <Text className="text-white font-bold text-sm" numberOfLines={1}>
+                  {safeHaven.name}
+                </Text>
+                <Text className="text-white/60 text-xs mt-0.5">
+                  {safeHaven.categoryLabel} · {formatDistance(safeHaven.distanceMeters)}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => openDirections(safeHaven)}
+                activeOpacity={0.85}
+                className="flex-row items-center bg-white rounded-full px-3 py-2"
+              >
+                <Ionicons name="navigate" size={14} color={colors.sos[600]} />
+                <Text className="text-xs font-bold ml-1" style={{ color: colors.sos[600] }}>
+                  Directions
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <TouchableOpacity
           onPress={shareLink}
