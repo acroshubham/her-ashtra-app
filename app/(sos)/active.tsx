@@ -1,27 +1,40 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Share, Alert, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, Share, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { useRouter, type Href } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import {
-  CameraView,
-  useCameraPermissions,
-  useMicrophonePermissions,
-} from "expo-camera";
+  ShieldAlert,
+  MapPin,
+  Video,
+  VideoOff,
+  CheckCircle2,
+  Share2,
+  Navigation as NavIcon,
+  Bot,
+  X,
+} from "lucide-react-native";
+import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
 import { useSosStore } from "@/stores/useSosStore";
 import { useContactStore } from "@/stores/useContactStore";
 import { useSafeHavenStore } from "@/stores/useSafeHavenStore";
 import { uploadVideo } from "@/lib/cloudinary";
-import { CATEGORY_COLOR, CATEGORY_ICON, formatDistance, openDirections } from "@/lib/safeHaven";
-import colors from "@/lib/theme";
+import { CATEGORY_TINT, guardian } from "@/lib/theme";
+import { formatDistance, openDirections } from "@/lib/safeHaven";
 
 const COUNTDOWN_SECONDS = 7;
 const VIDEO_MAX_SECONDS = 20;
 
 type Step = "countdown" | "dispatching" | "live";
+
+function mmss(total: number) {
+  const m = Math.floor(total / 60).toString().padStart(2, "0");
+  const s = (total % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
 
 export default function ActiveSos() {
   const router = useRouter();
@@ -39,6 +52,7 @@ export default function ActiveSos() {
   const [count, setCount] = useState(COUNTDOWN_SECONDS);
   const [recording, setRecording] = useState(false);
   const [mediaAttached, setMediaAttached] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
 
   const [camPerm, requestCamPerm] = useCameraPermissions();
   const [micPerm, requestMicPerm] = useMicrophonePermissions();
@@ -58,6 +72,13 @@ export default function ActiveSos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count, step]);
 
+  // --- Live timer --------------------------------------------------------
+  useEffect(() => {
+    if (step !== "live") return;
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(t);
+  }, [step]);
+
   const cancel = useCallback(() => {
     reset();
     resetSafeHavens();
@@ -68,7 +89,6 @@ export default function ActiveSos() {
   const dispatch = useCallback(async () => {
     setStep("dispatching");
 
-    // Best-effort GPS; a denied/failed fix still sends the SOS with no coords.
     let lat: number | undefined;
     let lng: number | undefined;
     try {
@@ -91,11 +111,9 @@ export default function ActiveSos() {
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setStep("live");
-    // Find the safest nearby destination (best-effort; needs the GPS fix).
     if (lat != null && lng != null) {
       void findSafeHavens({ lat, lng });
     }
-    // Fire the recording flow without blocking the UI transition.
     void recordAndUpload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createEvent, cancel]);
@@ -106,10 +124,8 @@ export default function ActiveSos() {
       const cam = camPerm?.granted ? camPerm : await requestCamPerm();
       const mic = micPerm?.granted ? micPerm : await requestMicPerm();
       if (!cam?.granted || !mic?.granted) {
-        return; // stay location-only
+        return;
       }
-
-      // Wait briefly for the camera to mount + report ready.
       for (let i = 0; i < 50 && !cameraReadyRef.current; i++) {
         await new Promise((r) => setTimeout(r, 100));
       }
@@ -152,56 +168,68 @@ export default function ActiveSos() {
   // ======================================================================
   if (step === "countdown") {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.sos[600] }}>
+      <View style={{ flex: 1, backgroundColor: guardian.bg }}>
         <StatusBar style="light" />
-        <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-white/90 text-lg font-semibold tracking-wide">
+        <LinearGradient colors={["#7f1d1d", guardian.bg]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: 400, opacity: 0.6 }} />
+        <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
+          <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 15, fontWeight: "700", letterSpacing: 2 }}>
             SENDING SOS IN
           </Text>
-          <Text className="text-white font-extrabold" style={{ fontSize: 120, lineHeight: 130 }}>
-            {count}
-          </Text>
-          <Text className="text-white/80 text-center mb-10">
-            Your trusted circle will be alerted with your live location.
-          </Text>
-          <TouchableOpacity
-            onPress={cancel}
-            activeOpacity={0.85}
-            className="bg-white rounded-full px-12 py-5"
+          <View
+            style={{
+              width: 200,
+              height: 200,
+              borderRadius: 100,
+              borderWidth: 3,
+              borderColor: guardian.primary,
+              alignItems: "center",
+              justifyContent: "center",
+              marginVertical: 32,
+            }}
           >
-            <Text className="text-lg font-extrabold" style={{ color: colors.sos[600] }}>
-              CANCEL
+            <Text style={{ color: "#fff", fontSize: 96, fontWeight: "900" }}>{count}</Text>
+          </View>
+          <Text style={{ color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 36, fontSize: 14 }}>
+            Your Guardian Circle will be alerted with your live location.
+          </Text>
+          <Pressable onPress={cancel} style={{ backgroundColor: "#fff", borderRadius: 999, paddingHorizontal: 48, paddingVertical: 16 }}>
+            <Text style={{ color: guardian.bg, fontSize: 17, fontWeight: "900" }}>CANCEL</Text>
+          </Pressable>
+          <Pressable onPress={dispatch} style={{ marginTop: 22 }}>
+            <Text style={{ color: "rgba(255,255,255,0.9)", fontWeight: "700", textDecorationLine: "underline" }}>
+              Send now
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={dispatch} className="mt-6">
-            <Text className="text-white/90 font-semibold underline">Send now</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+          </Pressable>
+        </SafeAreaView>
+      </View>
     );
   }
 
   if (step === "dispatching") {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.sos[600] }}>
+      <View style={{ flex: 1, backgroundColor: guardian.bg, alignItems: "center", justifyContent: "center" }}>
         <StatusBar style="light" />
-        <View className="flex-1 items-center justify-center px-8">
-          <ActivityIndicator size="large" color="#ffffff" />
-          <Text className="text-white text-lg font-semibold mt-6">Sending your SOS…</Text>
-        </View>
-      </SafeAreaView>
+        <LinearGradient
+          colors={guardian.gradRed}
+          style={{ width: 96, height: 96, borderRadius: 48, alignItems: "center", justifyContent: "center" }}
+        >
+          <ShieldAlert color="#fff" size={44} />
+        </LinearGradient>
+        <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800", marginTop: 24 }}>Sending your SOS…</Text>
+      </View>
     );
   }
 
   // step === "live"
   return (
-    <SafeAreaView className="flex-1 bg-[#1c0a10]" edges={["top", "bottom"]}>
+    <View style={{ flex: 1, backgroundColor: guardian.bg }}>
       <StatusBar style="light" />
-      {/* Hidden-ish camera used to record evidence; kept small on screen. */}
+      <LinearGradient colors={["#7f1d1d", guardian.bg]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: 360, opacity: 0.5 }} />
+
       {camPerm?.granted && micPerm?.granted && (
         <CameraView
           ref={cameraRef}
-          style={{ position: "absolute", width: 110, height: 150, top: 60, right: 16, borderRadius: 12 }}
+          style={{ position: "absolute", width: 84, height: 116, top: 60, right: 16, borderRadius: 12, opacity: 0.9 }}
           mode="video"
           facing="back"
           onCameraReady={() => {
@@ -210,108 +238,120 @@ export default function ActiveSos() {
         />
       )}
 
-      <View className="flex-1 px-6 pt-10">
-        <View className="items-center mt-4">
-          <View
-            className="w-20 h-20 rounded-full items-center justify-center mb-4"
-            style={{ backgroundColor: colors.sos[500] }}
-          >
-            <Ionicons name="alert" size={40} color="#ffffff" />
-          </View>
-          <Text className="text-white text-2xl font-extrabold">SOS ACTIVE</Text>
-          <Text className="text-white/70 text-center mt-2">
-            {contacts.length > 0
-              ? `${contacts.length} contact${contacts.length > 1 ? "s" : ""} notified by email.`
-              : "No contacts yet — add trusted contacts so they get alerted next time."}
-          </Text>
-        </View>
-
-        <View className="bg-white/10 rounded-2xl p-4 mt-8">
-          <View className="flex-row items-center">
-            <Ionicons name="location" size={18} color={colors.brand[300]} />
-            <Text className="text-white/90 font-semibold ml-2">Sharing live location</Text>
-          </View>
-          <Text className="text-white/60 text-xs mt-1">
-            Updates every 20s while this app stays open. It pauses if the app is closed.
-          </Text>
-        </View>
-
-        <View className="bg-white/10 rounded-2xl p-4 mt-3">
-          <View className="flex-row items-center">
-            <Ionicons
-              name={recording ? "videocam" : mediaAttached ? "checkmark-circle" : "videocam-off"}
-              size={18}
-              color={recording ? colors.sos[500] : colors.brand[300]}
-            />
-            <Text className="text-white/90 font-semibold ml-2">
-              {recording
-                ? "Recording video evidence…"
-                : mediaAttached
-                  ? "Video evidence attached"
-                  : "Video evidence (camera off / skipped)"}
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 16 }}>
+          <View style={{ alignItems: "center", marginTop: 8 }}>
+            <View
+              style={{
+                width: 88,
+                height: 88,
+                borderRadius: 44,
+                backgroundColor: guardian.primary,
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: guardian.primary,
+                shadowOpacity: 0.7,
+                shadowRadius: 24,
+                elevation: 10,
+              }}
+            >
+              <ShieldAlert color="#fff" size={42} />
+            </View>
+            <Text style={{ color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 14 }}>EMERGENCY ACTIVE</Text>
+            <Text style={{ color: guardian.primary, fontSize: 34, fontWeight: "900", marginTop: 4, letterSpacing: 2 }}>
+              {mmss(elapsed)}
             </Text>
           </View>
-        </View>
 
-        {safeHaven && (
-          <View className="bg-white/10 rounded-2xl p-4 mt-3">
-            <View className="flex-row items-center">
-              <Ionicons name="shield-checkmark" size={18} color={colors.success[500]} />
-              <Text className="text-white/90 font-semibold ml-2">Nearest safe place</Text>
-            </View>
-            <View className="flex-row items-center mt-3">
-              <View
-                className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-                style={{ backgroundColor: `${CATEGORY_COLOR[safeHaven.category]}33` }}
-              >
-                <Ionicons
-                  name={CATEGORY_ICON[safeHaven.category]}
-                  size={20}
-                  color="#ffffff"
-                />
+          {/* Status cards */}
+          <View style={{ gap: 12, marginTop: 24 }}>
+            <StatusCard
+              icon={<MapPin color={guardian.secondary} size={18} />}
+              title="Sharing live location"
+              subtitle="Updates while the app stays open"
+            />
+            <StatusCard
+              icon={recording ? <Video color={guardian.primary} size={18} /> : mediaAttached ? <CheckCircle2 color={guardian.success} size={18} /> : <VideoOff color={guardian.textDim} size={18} />}
+              title={recording ? "Recording evidence…" : mediaAttached ? "Video evidence attached" : "Video evidence (skipped)"}
+              subtitle={recording ? "Up to 20 seconds" : undefined}
+            />
+
+            {safeHaven && (
+              <View style={{ backgroundColor: guardian.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: guardian.border }}>
+                <Text style={{ color: guardian.textDim, fontSize: 11, fontWeight: "700" }}>NEAREST SAFE PLACE</Text>
+                <View className="flex-row items-center" style={{ marginTop: 10 }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${CATEGORY_TINT[safeHaven.category] ?? guardian.secondary}33`, alignItems: "center", justifyContent: "center", marginRight: 10 }}>
+                    <NavIcon color={CATEGORY_TINT[safeHaven.category] ?? guardian.secondary} size={18} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#fff", fontWeight: "700" }} numberOfLines={1}>{safeHaven.name}</Text>
+                    <Text style={{ color: guardian.textDim, fontSize: 12 }}>{safeHaven.categoryLabel} · {formatDistance(safeHaven.distanceMeters)}</Text>
+                  </View>
+                  <Pressable onPress={() => openDirections(safeHaven)} style={{ backgroundColor: "#fff", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
+                    <Text style={{ color: guardian.primary, fontWeight: "800", fontSize: 12 }}>Directions</Text>
+                  </Pressable>
+                </View>
               </View>
-              <View className="flex-1 pr-2">
-                <Text className="text-white font-bold text-sm" numberOfLines={1}>
-                  {safeHaven.name}
+            )}
+
+            {/* Guardian circle */}
+            <View style={{ backgroundColor: guardian.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: guardian.border }}>
+              <Text style={{ color: guardian.textDim, fontSize: 11, fontWeight: "700" }}>ALERTED GUARDIANS</Text>
+              {contacts.length === 0 ? (
+                <Text style={{ color: guardian.textDim, fontSize: 13, marginTop: 8 }}>
+                  No contacts yet — add trusted guardians for next time.
                 </Text>
-                <Text className="text-white/60 text-xs mt-0.5">
-                  {safeHaven.categoryLabel} · {formatDistance(safeHaven.distanceMeters)}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => openDirections(safeHaven)}
-                activeOpacity={0.85}
-                className="flex-row items-center bg-white rounded-full px-3 py-2"
-              >
-                <Ionicons name="navigate" size={14} color={colors.sos[600]} />
-                <Text className="text-xs font-bold ml-1" style={{ color: colors.sos[600] }}>
-                  Directions
-                </Text>
-              </TouchableOpacity>
+              ) : (
+                <View className="flex-row items-center" style={{ marginTop: 10, flexWrap: "wrap", gap: 8 }}>
+                  {contacts.slice(0, 5).map((c) => (
+                    <View key={c.id} className="flex-row items-center" style={{ backgroundColor: guardian.cardAlt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+                      <CheckCircle2 color={guardian.success} size={13} />
+                      <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600", marginLeft: 5 }}>{c.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
-        )}
 
-        <TouchableOpacity
-          onPress={shareLink}
-          activeOpacity={0.85}
-          className="flex-row items-center justify-center bg-white/10 rounded-2xl py-4 mt-3"
-        >
-          <Ionicons name="share-outline" size={18} color="#ffffff" />
-          <Text className="text-white font-semibold ml-2">Share live-location link</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={{ flex: 1 }} />
 
-      <View className="px-6 pb-6">
-        <TouchableOpacity
-          onPress={onSafe}
-          activeOpacity={0.85}
-          className="rounded-2xl py-5 items-center"
-          style={{ backgroundColor: colors.success[500] }}
-        >
-          <Text className="text-white text-lg font-extrabold">{"I'M SAFE — RESOLVE"}</Text>
-        </TouchableOpacity>
+          {/* Actions */}
+          <View style={{ gap: 10 }}>
+            <View className="flex-row" style={{ gap: 10 }}>
+              <Pressable onPress={shareLink} style={{ flex: 1, backgroundColor: guardian.card, borderRadius: 16, paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", borderWidth: 1, borderColor: guardian.border }}>
+                <Share2 color="#fff" size={16} />
+                <Text style={{ color: "#fff", fontWeight: "700", marginLeft: 8 }}>Share link</Text>
+              </Pressable>
+              <Pressable onPress={() => router.push("/(tabs)/assistant" as Href)} style={{ flex: 1, backgroundColor: guardian.card, borderRadius: 16, paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", borderWidth: 1, borderColor: guardian.border }}>
+                <Bot color={guardian.warning} size={16} />
+                <Text style={{ color: "#fff", fontWeight: "700", marginLeft: 8 }}>Assistant</Text>
+              </Pressable>
+            </View>
+
+            <Pressable onPress={onSafe} style={{ borderRadius: 18, overflow: "hidden" }}>
+              <LinearGradient colors={guardian.gradGreen} style={{ paddingVertical: 18, alignItems: "center", flexDirection: "row", justifyContent: "center" }}>
+                <X color="#fff" size={18} />
+                <Text style={{ color: "#fff", fontSize: 17, fontWeight: "900", marginLeft: 8 }}>{"I'M SAFE — RESOLVE"}</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+function StatusCard({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) {
+  return (
+    <View style={{ backgroundColor: guardian.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: guardian.border, flexDirection: "row", alignItems: "center" }}>
+      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: guardian.cardAlt, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+        {icon}
       </View>
-    </SafeAreaView>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>{title}</Text>
+        {subtitle ? <Text style={{ color: guardian.textDim, fontSize: 12, marginTop: 1 }}>{subtitle}</Text> : null}
+      </View>
+    </View>
   );
 }
